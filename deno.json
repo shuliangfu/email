@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/email",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0-beta.4",
   "license": "MIT",
   "exports": {
     ".": "./src/mod.ts"
@@ -32,11 +32,15 @@
     }
   },
   "imports": {
-    "@dreamer/test": "jsr:@dreamer/test@1.0.0-beta.22"
+    "@dreamer/service": "jsr:@dreamer/service@^1.0.0-beta.4",
+    "@dreamer/test": "jsr:@dreamer/test@^1.0.0-beta.39"
   },
   "nodeModulesDir": "auto",
   "allowScripts": {
     "allow": [],
-    "deny": ["npm:esbuild@0.27.2", "npm:puppeteer@24.36.0"]
+    "deny": [
+      "npm:esbuild@0.27.2",
+      "npm:puppeteer@24.36.0"
+    ]
   }
 }

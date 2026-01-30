@@ -3,9 +3,12 @@
  */
 
 import { describe, expect, it } from "@dreamer/test";
+import { ServiceContainer } from "@dreamer/service";
 import {
+  createEmailManager,
   createMessage,
   createTemplateMessage,
+  EmailManager,
   renderTemplate,
   SmtpClient,
 } from "../src/mod.ts";
@@ -637,5 +640,203 @@ describe("Email", () => {
       expect(message.cc![0].address).toBe("cc@example.com");
       expect(message.priority).toBe("high");
     });
+  });
+});
+
+describe("EmailManager", () => {
+  it("应该创建 EmailManager 实例", () => {
+    const manager = new EmailManager();
+    expect(manager).toBeInstanceOf(EmailManager);
+  });
+
+  it("应该获取默认管理器名称", () => {
+    const manager = new EmailManager();
+    expect(manager.getName()).toBe("default");
+  });
+
+  it("应该获取自定义管理器名称", () => {
+    const manager = new EmailManager({ name: "custom" });
+    expect(manager.getName()).toBe("custom");
+  });
+
+  it("应该注册和获取 SMTP 客户端", () => {
+    const manager = new EmailManager();
+    manager.registerClient("main", {
+      host: "smtp.example.com",
+      port: 587,
+    });
+
+    const client = manager.getClient("main");
+    expect(client).toBeInstanceOf(SmtpClient);
+  });
+
+  it("应该返回同一个客户端实例", () => {
+    const manager = new EmailManager();
+    manager.registerClient("main", {
+      host: "smtp.example.com",
+      port: 587,
+    });
+
+    const client1 = manager.getClient("main");
+    const client2 = manager.getClient("main");
+    expect(client1).toBe(client2);
+  });
+
+  it("应该在未注册配置时抛出错误", () => {
+    const manager = new EmailManager();
+    expect(() => manager.getClient("unknown")).toThrow(
+      '未找到名为 "unknown" 的 SMTP 配置',
+    );
+  });
+
+  it("应该使用默认配置创建客户端", () => {
+    const manager = new EmailManager({
+      defaultConfig: {
+        host: "smtp.default.com",
+        port: 465,
+        secure: true,
+      },
+    });
+
+    const client = manager.getClient("any");
+    expect(client).toBeInstanceOf(SmtpClient);
+  });
+
+  it("应该检查客户端是否存在", () => {
+    const manager = new EmailManager();
+
+    expect(manager.hasClient("main")).toBe(false);
+
+    manager.registerClient("main", {
+      host: "smtp.example.com",
+    });
+
+    expect(manager.hasClient("main")).toBe(true);
+  });
+
+  it("应该移除客户端", async () => {
+    const manager = new EmailManager();
+    manager.registerClient("main", {
+      host: "smtp.example.com",
+    });
+
+    manager.getClient("main"); // 创建实例
+    expect(manager.hasClient("main")).toBe(true);
+
+    await manager.removeClient("main");
+    expect(manager.hasClient("main")).toBe(false);
+  });
+
+  it("应该获取所有客户端名称", () => {
+    const manager = new EmailManager();
+    manager.registerClient("smtp1", { host: "smtp1.example.com" });
+    manager.registerClient("smtp2", { host: "smtp2.example.com" });
+
+    const names = manager.getClientNames();
+    expect(names).toContain("smtp1");
+    expect(names).toContain("smtp2");
+  });
+
+  it("应该关闭所有客户端", async () => {
+    const manager = new EmailManager();
+    manager.registerClient("main", { host: "smtp.example.com" });
+    manager.getClient("main");
+
+    await manager.close();
+    // 关闭后 clients map 应该被清空
+    expect(manager.getClientNames()).toContain("main"); // 配置仍在
+  });
+});
+
+describe("EmailManager ServiceContainer 集成", () => {
+  it("应该设置和获取服务容器", () => {
+    const manager = new EmailManager();
+    const container = new ServiceContainer();
+
+    expect(manager.getContainer()).toBeUndefined();
+
+    manager.setContainer(container);
+    expect(manager.getContainer()).toBe(container);
+  });
+
+  it("应该从服务容器获取 EmailManager", () => {
+    const container = new ServiceContainer();
+    const manager = new EmailManager({ name: "test" });
+    manager.setContainer(container);
+
+    container.registerSingleton("email:test", () => manager);
+
+    const retrieved = EmailManager.fromContainer(container, "test");
+    expect(retrieved).toBe(manager);
+  });
+
+  it("应该在服务不存在时返回 undefined", () => {
+    const container = new ServiceContainer();
+    const retrieved = EmailManager.fromContainer(container, "non-existent");
+    expect(retrieved).toBeUndefined();
+  });
+
+  it("应该支持多个 EmailManager 实例", () => {
+    const container = new ServiceContainer();
+
+    const internalManager = new EmailManager({ name: "internal" });
+    internalManager.setContainer(container);
+    internalManager.registerClient("main", { host: "internal.smtp.com" });
+
+    const externalManager = new EmailManager({ name: "external" });
+    externalManager.setContainer(container);
+    externalManager.registerClient("main", { host: "external.smtp.com" });
+
+    container.registerSingleton("email:internal", () => internalManager);
+    container.registerSingleton("email:external", () => externalManager);
+
+    expect(EmailManager.fromContainer(container, "internal")).toBe(
+      internalManager,
+    );
+    expect(EmailManager.fromContainer(container, "external")).toBe(
+      externalManager,
+    );
+  });
+});
+
+describe("createEmailManager 工厂函数", () => {
+  it("应该创建 EmailManager 实例", () => {
+    const manager = createEmailManager();
+    expect(manager).toBeInstanceOf(EmailManager);
+  });
+
+  it("应该使用默认名称", () => {
+    const manager = createEmailManager();
+    expect(manager.getName()).toBe("default");
+  });
+
+  it("应该使用自定义名称", () => {
+    const manager = createEmailManager({ name: "custom" });
+    expect(manager.getName()).toBe("custom");
+  });
+
+  it("应该能够在服务容器中注册", () => {
+    const container = new ServiceContainer();
+
+    container.registerSingleton(
+      "email:main",
+      () => createEmailManager({ name: "main" }),
+    );
+
+    const manager = container.get<EmailManager>("email:main");
+    expect(manager).toBeInstanceOf(EmailManager);
+    expect(manager.getName()).toBe("main");
+  });
+
+  it("应该支持默认配置", () => {
+    const manager = createEmailManager({
+      defaultConfig: {
+        host: "smtp.example.com",
+        port: 587,
+      },
+    });
+
+    const client = manager.getClient("any-name");
+    expect(client).toBeInstanceOf(SmtpClient);
   });
 });

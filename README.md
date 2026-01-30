@@ -4,13 +4,14 @@
 
 [![JSR](https://jsr.io/badges/@dreamer/email)](https://jsr.io/@dreamer/email)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-45%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-65%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
 
 ## 🎯 功能
 
-邮件发送库，用于邮件通知、邮件营销、系统通知等场景，提供 SMTP 客户端、邮件消息构建、模板渲染与批量发送能力。
+邮件发送库，用于邮件通知、邮件营销、系统通知等场景，提供 SMTP
+客户端、邮件消息构建、模板渲染与批量发送能力。
 
 ---
 
@@ -32,13 +33,13 @@ bunx jsr add @dreamer/email
 
 ## 🌍 环境兼容性
 
-| 环境 | 版本要求 | 状态 |
-|------|---------|------|
-| **Deno** | 2.5.0+ | ✅ 完全支持 |
-| **Bun** | 1.0+ | ✅ 完全支持 |
-| **服务端** | - | ✅ 支持（兼容 Deno 和 Bun 运行时，SMTP 客户端功能） |
-| **客户端** | - | ❌ 不支持（浏览器环境无法直接发送 SMTP 邮件） |
-| **依赖** | - | 📦 无外部依赖（纯 TypeScript 实现） |
+| 环境       | 版本要求 | 状态                                                |
+| ---------- | -------- | --------------------------------------------------- |
+| **Deno**   | 2.5.0+   | ✅ 完全支持                                         |
+| **Bun**    | 1.0+     | ✅ 完全支持                                         |
+| **服务端** | -        | ✅ 支持（兼容 Deno 和 Bun 运行时，SMTP 客户端功能） |
+| **客户端** | -        | ❌ 不支持（浏览器环境无法直接发送 SMTP 邮件）       |
+| **依赖**   | -        | 📦 无外部依赖（纯 TypeScript 实现）                 |
 
 ---
 
@@ -57,6 +58,10 @@ bunx jsr add @dreamer/email
   - 模板邮件：支持 `{{variable}}` 变量替换
   - 支持根据模板创建邮件消息（文本/HTML/文本+HTML）
   - 无外部依赖，纯 TypeScript 实现
+- **服务容器集成**：
+  - 支持 `@dreamer/service` 依赖注入
+  - EmailManager 管理多个 SMTP 客户端
+  - 提供 `createEmailManager` 工厂函数
 
 ---
 
@@ -73,7 +78,7 @@ bunx jsr add @dreamer/email
 ### 基本使用
 
 ```typescript
-import { SmtpClient, createMessage } from "jsr:@dreamer/email";
+import { createMessage, SmtpClient } from "jsr:@dreamer/email";
 
 // 创建 SMTP 客户端
 const client = new SmtpClient({
@@ -237,7 +242,7 @@ const message = createMessage({
 ### 示例 1：基础用法
 
 ```typescript
-import { SmtpClient, createMessage } from "jsr:@dreamer/email";
+import { createMessage, SmtpClient } from "jsr:@dreamer/email";
 
 const client = new SmtpClient({
   host: "smtp.example.com",
@@ -278,14 +283,17 @@ const message = createMessage({
 ### 示例 3：模板变量
 
 ```typescript
-import { renderTemplate, createTemplateMessage } from "jsr:@dreamer/email";
+import { createTemplateMessage, renderTemplate } from "jsr:@dreamer/email";
 
 // 仅渲染字符串
 const rendered = renderTemplate("你好 {{name}}", { name: "李四" }); // "你好 李四"
 
 // 创建模板邮件
 const message = createTemplateMessage(
-  { text: "订单 {{orderId}} 已发货。", html: "<p>订单 {{orderId}} 已发货。</p>" },
+  {
+    text: "订单 {{orderId}} 已发货。",
+    html: "<p>订单 {{orderId}} 已发货。</p>",
+  },
   { orderId: "12345" },
   {
     from: "noreply@example.com",
@@ -310,9 +318,11 @@ new SmtpClient(config: SmtpConfig)
 ```
 
 **参数**：
+
 - `config.host` (string): SMTP 服务器地址
 - `config.port` (number, 可选): SMTP 服务器端口（默认：587）
-- `config.secure` (boolean, 可选): 是否使用 TLS/SSL（默认：false，使用 STARTTLS）
+- `config.secure` (boolean, 可选): 是否使用 TLS/SSL（默认：false，使用
+  STARTTLS）
 - `config.auth` (object, 可选): 认证信息
   - `auth.user` (string): 用户名
   - `auth.password` (string): 密码
@@ -323,7 +333,8 @@ new SmtpClient(config: SmtpConfig)
 
 - `connect()`: 连接到 SMTP 服务器
 - `send(message: Message | MessageOptions)`: 发送邮件
-- `sendBatch(messages, options?)`: 批量发送邮件（batchSize、delay、continueOnError）
+- `sendBatch(messages, options?)`:
+  批量发送邮件（batchSize、delay、continueOnError）
 - `close()`: 关闭 SMTP 连接
 
 ### createMessage
@@ -358,26 +369,84 @@ const result = renderTemplate(template: string, data: Record<string, unknown>);
 
 ---
 
+## 🔗 ServiceContainer 集成
+
+### 使用 createEmailManager 工厂函数
+
+```typescript
+import { ServiceContainer } from "@dreamer/service";
+import { createEmailManager, EmailManager } from "@dreamer/email";
+
+// 创建服务容器
+const container = new ServiceContainer();
+
+// 注册 EmailManager
+container.registerSingleton(
+  "email:main",
+  () => createEmailManager({ name: "main" }),
+);
+
+// 获取 EmailManager
+const manager = container.get<EmailManager>("email:main");
+
+// 注册 SMTP 客户端配置
+manager.registerClient("notifications", {
+  host: "smtp.example.com",
+  port: 587,
+  auth: {
+    user: "user@example.com",
+    password: "password",
+  },
+});
+
+// 发送邮件
+await manager.send("notifications", {
+  from: "noreply@example.com",
+  to: "user@example.com",
+  subject: "Welcome!",
+  text: "Welcome to our service!",
+});
+```
+
+### EmailManager API
+
+| 方法                              | 说明                   |
+| --------------------------------- | ---------------------- |
+| `getName()`                       | 获取管理器名称         |
+| `setContainer(container)`         | 设置服务容器           |
+| `getContainer()`                  | 获取服务容器           |
+| `fromContainer(container, name?)` | 从服务容器获取实例     |
+| `registerClient(name, config)`    | 注册 SMTP 客户端配置   |
+| `getClient(name)`                 | 获取或创建 SMTP 客户端 |
+| `hasClient(name)`                 | 检查客户端是否存在     |
+| `removeClient(name)`              | 移除客户端             |
+| `getClientNames()`                | 获取所有客户端名称     |
+| `send(clientName, message)`       | 使用指定客户端发送邮件 |
+| `close()`                         | 关闭所有客户端连接     |
+
+---
+
 ## 📊 测试报告
 
-本库经过全面测试，所有 45 个测试用例均已通过，测试覆盖率达到 100%。详细测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)。
+本库经过全面测试，所有 65 个测试用例均已通过，测试覆盖率达到
+100%。详细测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)。
 
-**测试统计**：
-- **总测试数**: 45
-- **通过**: 45 ✅
-- **失败**: 0
-- **通过率**: 100% ✅
-- **测试执行时间**: ~1 秒（Deno 环境）
-- **测试覆盖**: 所有公共 API、边界情况、错误处理
-- **测试环境**: Deno 2.5.0+, Bun 1.0+
+| 项目         | 详情  |
+| ------------ | ----- |
+| **总测试数** | 65    |
+| **通过**     | 65 ✅ |
+| **失败**     | 0     |
+| **通过率**   | 100%  |
 
-**测试类型**：
-- ✅ 单元测试（mod.test.ts，45 个）
-
-**测试亮点**：
-- ✅ SmtpClient 与 Message/createMessage/toMIME 全覆盖
-- ✅ 模板 renderTemplate、createTemplateMessage 全覆盖
-- ✅ 无外部 SMTP 依赖，纯逻辑单元测试
+| 测试模块                    | 测试数量 | 状态    |
+| --------------------------- | -------- | ------- |
+| SmtpClient                  | 6        | ✅ 完成 |
+| Message                     | 31       | ✅ 完成 |
+| renderTemplate              | 4        | ✅ 完成 |
+| createTemplateMessage       | 4        | ✅ 完成 |
+| EmailManager                | 11       | ✅ 完成 |
+| ServiceContainer 集成       | 4        | ✅ 完成 |
+| createEmailManager 工厂函数 | 5        | ✅ 完成 |
 
 查看完整测试报告：[TEST_REPORT.md](./TEST_REPORT.md)
 
@@ -385,7 +454,8 @@ const result = renderTemplate(template: string, data: Record<string, unknown>);
 
 ## 📝 注意事项
 
-- **应用专用密码**：使用 Gmail 等邮件服务时，需要使用应用专用密码，而不是普通密码。
+- **应用专用密码**：使用 Gmail
+  等邮件服务时，需要使用应用专用密码，而不是普通密码。
 - **TLS 证书**：在生产环境中，建议不要使用 `ignoreTLS: true`。
 - **批量发送**：批量发送时建议设置适当的延迟，避免被邮件服务器限制。
 - **连接管理**：发送完成后记得调用 `close()` 关闭连接。

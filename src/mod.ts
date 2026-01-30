@@ -39,6 +39,8 @@
  * ```
  */
 
+import type { ServiceContainer } from "@dreamer/service";
+
 /**
  * SMTP 客户端配置选项
  */
@@ -802,4 +804,176 @@ export function createTemplateMessage(
     text: template.text ? renderTemplate(template.text, data) : undefined,
     html: template.html ? renderTemplate(template.html, data) : undefined,
   });
+}
+
+/**
+ * 邮件管理器配置选项
+ */
+export interface EmailManagerOptions {
+  /** 管理器名称（用于服务容器识别） */
+  name?: string;
+  /** 默认 SMTP 配置（可选） */
+  defaultConfig?: SmtpConfig;
+}
+
+/**
+ * 邮件管理器
+ *
+ * 管理多个 SMTP 客户端实例，支持不同的邮件服务器配置
+ */
+export class EmailManager {
+  /** SMTP 客户端实例映射表 */
+  private clients: Map<string, SmtpClient> = new Map();
+  /** 客户端配置映射表 */
+  private configs: Map<string, SmtpConfig> = new Map();
+  /** 默认 SMTP 配置 */
+  private defaultConfig?: SmtpConfig;
+  /** 服务容器实例 */
+  private container?: ServiceContainer;
+  /** 管理器名称 */
+  private readonly managerName: string;
+
+  /**
+   * 创建邮件管理器实例
+   * @param options 管理器配置选项
+   */
+  constructor(options: EmailManagerOptions = {}) {
+    this.managerName = options.name || "default";
+    this.defaultConfig = options.defaultConfig;
+  }
+
+  /**
+   * 获取管理器名称
+   * @returns 管理器名称
+   */
+  getName(): string {
+    return this.managerName;
+  }
+
+  /**
+   * 设置服务容器
+   * @param container 服务容器实例
+   */
+  setContainer(container: ServiceContainer): void {
+    this.container = container;
+  }
+
+  /**
+   * 获取服务容器
+   * @returns 服务容器实例，如果未设置则返回 undefined
+   */
+  getContainer(): ServiceContainer | undefined {
+    return this.container;
+  }
+
+  /**
+   * 从服务容器创建 EmailManager 实例
+   * @param container 服务容器实例
+   * @param name 管理器名称（默认 "default"）
+   * @returns 关联了服务容器的 EmailManager 实例
+   */
+  static fromContainer(
+    container: ServiceContainer,
+    name = "default",
+  ): EmailManager | undefined {
+    const serviceName = `email:${name}`;
+    return container.tryGet<EmailManager>(serviceName);
+  }
+
+  /**
+   * 注册 SMTP 客户端配置
+   * @param name 客户端名称
+   * @param config SMTP 配置
+   */
+  registerClient(name: string, config: SmtpConfig): void {
+    this.configs.set(name, config);
+  }
+
+  /**
+   * 获取或创建 SMTP 客户端
+   * @param name 客户端名称
+   * @returns SmtpClient 实例
+   * @throws {Error} 如果未注册配置且没有默认配置
+   */
+  getClient(name: string): SmtpClient {
+    let client = this.clients.get(name);
+    if (!client) {
+      const config = this.configs.get(name) || this.defaultConfig;
+      if (!config) {
+        throw new Error(`未找到名为 "${name}" 的 SMTP 配置`);
+      }
+      client = new SmtpClient(config);
+      this.clients.set(name, client);
+    }
+    return client;
+  }
+
+  /**
+   * 检查是否存在指定名称的客户端
+   * @param name 客户端名称
+   * @returns 是否存在
+   */
+  hasClient(name: string): boolean {
+    return this.clients.has(name) || this.configs.has(name);
+  }
+
+  /**
+   * 移除客户端
+   * @param name 客户端名称
+   */
+  async removeClient(name: string): Promise<void> {
+    const client = this.clients.get(name);
+    if (client) {
+      await client.close();
+      this.clients.delete(name);
+    }
+    this.configs.delete(name);
+  }
+
+  /**
+   * 获取所有客户端名称
+   * @returns 客户端名称数组
+   */
+  getClientNames(): string[] {
+    const names = new Set([
+      ...this.clients.keys(),
+      ...this.configs.keys(),
+    ]);
+    return Array.from(names);
+  }
+
+  /**
+   * 使用指定客户端发送邮件
+   * @param clientName 客户端名称
+   * @param message 邮件消息
+   */
+  async send(
+    clientName: string,
+    message: Message | MessageOptions,
+  ): Promise<void> {
+    const client = this.getClient(clientName);
+    await client.send(message);
+  }
+
+  /**
+   * 关闭所有客户端连接
+   */
+  async close(): Promise<void> {
+    for (const client of this.clients.values()) {
+      await client.close();
+    }
+    this.clients.clear();
+  }
+}
+
+/**
+ * 创建 EmailManager 的工厂函数
+ * 用于服务容器注册
+ * @param options 邮件管理器配置选项
+ * @returns EmailManager 实例
+ */
+export function createEmailManager(
+  options?: EmailManagerOptions,
+): EmailManager {
+  return new EmailManager(options);
 }
