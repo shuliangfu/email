@@ -1,0 +1,17 @@
+{
+  "email": {
+    "smtp": {
+      "connectFailed": "SMTP connection failed: {message}",
+      "ehloFailed": "EHLO failed: {response}",
+      "starttlsFailed": "STARTTLS failed: {response}",
+      "authFailed": "SMTP authentication failed: {response}",
+      "notConnected": "SMTP connection not established",
+      "mailFromFailed": "MAIL FROM failed: {response}",
+      "rcptToFailed": "RCPT TO failed: {response}",
+      "dataFailed": "DATA failed: {response}",
+      "sendFailed": "Send email failed: {message}",
+      "batchSendFailed": "Batch send failed: {errorMsg}",
+      "configNotFound": "SMTP config not found for name \"{name}\""
+    }
+  }
+}

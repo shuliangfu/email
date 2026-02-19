@@ -40,6 +40,7 @@
  */
 
 import type { ServiceContainer } from "@dreamer/service";
+import { $tr } from "./i18n.ts";
 
 /**
  * SMTP 客户端配置选项
@@ -491,14 +492,16 @@ export class SmtpClient {
       // 读取服务器欢迎消息
       const response = await this.readResponse();
       if (!response.startsWith("220")) {
-        throw new Error(`SMTP 连接失败: ${response}`);
+        throw new Error($tr("email.smtp.connectFailed", { message: response }));
       }
 
       // 发送 EHLO
       await this.sendCommand(`EHLO ${this.config.host}`);
       const ehloResponse = await this.readResponse();
       if (!ehloResponse.startsWith("250")) {
-        throw new Error(`EHLO 失败: ${ehloResponse}`);
+        throw new Error(
+          $tr("email.smtp.ehloFailed", { response: ehloResponse }),
+        );
       }
 
       // 如果不使用安全连接，尝试 STARTTLS
@@ -513,7 +516,9 @@ export class SmtpClient {
           await this.sendCommand("STARTTLS");
           const startTlsResponse = await this.readResponse();
           if (!startTlsResponse.startsWith("220")) {
-            throw new Error(`STARTTLS 失败: ${startTlsResponse}`);
+            throw new Error(
+              $tr("email.smtp.starttlsFailed", { response: startTlsResponse }),
+            );
           }
 
           // 升级连接为 TLS
@@ -539,11 +544,8 @@ export class SmtpClient {
       }
     } catch (error) {
       await this.close();
-      throw new Error(
-        `SMTP 连接失败: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error($tr("email.smtp.connectFailed", { message }));
     }
   }
 
@@ -576,7 +578,7 @@ export class SmtpClient {
     await this.sendCommand(btoa(this.config.auth!.password));
     const response = await this.readResponse();
     if (!response.startsWith("235")) {
-      throw new Error(`SMTP 认证失败: ${response}`);
+      throw new Error($tr("email.smtp.authFailed", { response }));
     }
   }
 
@@ -586,7 +588,7 @@ export class SmtpClient {
    */
   private async sendCommand(command: string): Promise<void> {
     if (!this.writer) {
-      throw new Error("SMTP 连接未建立");
+      throw new Error($tr("email.smtp.notConnected"));
     }
     const encoder = new TextEncoder();
     const data = encoder.encode(command + "\r\n");
@@ -599,7 +601,7 @@ export class SmtpClient {
    */
   private async readResponse(): Promise<string> {
     if (!this.reader) {
-      throw new Error("SMTP 连接未建立");
+      throw new Error($tr("email.smtp.notConnected"));
     }
 
     const decoder = new TextDecoder();
@@ -641,7 +643,7 @@ export class SmtpClient {
       await this.sendCommand(`MAIL FROM:<${msg.from.address}>`);
       let response = await this.readResponse();
       if (!response.startsWith("250")) {
-        throw new Error(`MAIL FROM 失败: ${response}`);
+        throw new Error($tr("email.smtp.mailFromFailed", { response }));
       }
 
       // RCPT TO
@@ -654,7 +656,7 @@ export class SmtpClient {
         await this.sendCommand(`RCPT TO:<${recipient.address}>`);
         response = await this.readResponse();
         if (!response.startsWith("250")) {
-          throw new Error(`RCPT TO 失败: ${response}`);
+          throw new Error($tr("email.smtp.rcptToFailed", { response }));
         }
       }
 
@@ -662,7 +664,7 @@ export class SmtpClient {
       await this.sendCommand("DATA");
       response = await this.readResponse();
       if (!response.startsWith("354")) {
-        throw new Error(`DATA 失败: ${response}`);
+        throw new Error($tr("email.smtp.dataFailed", { response }));
       }
 
       // 发送邮件内容
@@ -671,14 +673,11 @@ export class SmtpClient {
       await this.sendCommand("."); // 结束 DATA 命令
       response = await this.readResponse();
       if (!response.startsWith("250")) {
-        throw new Error(`发送邮件失败: ${response}`);
+        throw new Error($tr("email.smtp.sendFailed", { message: response }));
       }
     } catch (error) {
-      throw new Error(
-        `发送邮件失败: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error($tr("email.smtp.sendFailed", { message }));
     }
   }
 
@@ -719,7 +718,7 @@ export class SmtpClient {
         results.push({ success: false, error: errorMsg });
 
         if (!continueOnError) {
-          throw new Error(`批量发送失败: ${errorMsg}`);
+          throw new Error($tr("email.smtp.batchSendFailed", { errorMsg }));
         }
       }
 
@@ -900,7 +899,7 @@ export class EmailManager {
     if (!client) {
       const config = this.configs.get(name) || this.defaultConfig;
       if (!config) {
-        throw new Error(`未找到名为 "${name}" 的 SMTP 配置`);
+        throw new Error($tr("email.smtp.configNotFound", { name }));
       }
       client = new SmtpClient(config);
       this.clients.set(name, client);

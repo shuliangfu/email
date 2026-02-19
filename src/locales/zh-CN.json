@@ -1,0 +1,17 @@
+{
+  "email": {
+    "smtp": {
+      "connectFailed": "SMTP 连接失败: {message}",
+      "ehloFailed": "EHLO 失败: {response}",
+      "starttlsFailed": "STARTTLS 失败: {response}",
+      "authFailed": "SMTP 认证失败: {response}",
+      "notConnected": "SMTP 连接未建立",
+      "mailFromFailed": "MAIL FROM 失败: {response}",
+      "rcptToFailed": "RCPT TO 失败: {response}",
+      "dataFailed": "DATA 失败: {response}",
+      "sendFailed": "发送邮件失败: {message}",
+      "batchSendFailed": "批量发送失败: {errorMsg}",
+      "configNotFound": "未找到名为 \"{name}\" 的 SMTP 配置"
+    }
+  }
+}
