@@ -1,14 +1,12 @@
 # @dreamer/email
 
-> 一个兼容 Deno 和 Bun 的邮件发送库，提供 SMTP 客户端、HTML 邮件支持等功能
+> [English](../../README.md) | 中文 (Chinese)
 
-**English**: [README](../../README.md) · **Test report (EN)**: [en-US/TEST_REPORT.md](../en-US/TEST_REPORT.md)
+> 一个兼容 Deno 和 Bun 的邮件发送库，提供 SMTP 客户端、HTML 邮件支持等功能
 
 [![JSR](https://jsr.io/badges/@dreamer/email)](https://jsr.io/@dreamer/email)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](../../LICENSE)
 [![Tests](https://img.shields.io/badge/tests-65%20passed-brightgreen)](./TEST_REPORT.md)
-
-**变更日志（最新）**：[1.0.0] - 2026-02-19 — 首个稳定版。新增：SmtpClient、Message、模板、EmailManager、i18n。完整历史：[English](../en-US/CHANGELOG.md) | [中文](./CHANGELOG.md)
 
 ---
 
@@ -427,6 +425,16 @@ await manager.send("notifications", {
 | `getClientNames()`                | 获取所有客户端名称     |
 | `send(clientName, message)`       | 使用指定客户端发送邮件 |
 | `close()`                         | 关闭所有客户端连接     |
+
+---
+
+## 📋 变更日志
+
+完整变更见 [CHANGELOG.md](./CHANGELOG.md)。
+
+**最新 (v1.0.0 - 2026-02-19)**：**新增** –
+首个稳定版。SmtpClient、Message、模板、EmailManager、i18n。详见
+[CHANGELOG](./CHANGELOG.md)。
 
 ---
 
