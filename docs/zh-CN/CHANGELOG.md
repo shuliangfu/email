@@ -7,6 +7,37 @@
 
 ---
 
+## [1.1.0] - 2026-07-23
+
+### 新增
+
+- **Node.js 兼容**：SMTP 客户端现可在 Node 22+ 运行——`src/mod.ts` 中原生的
+  `Deno.connect`/`Deno.startTls`/`Deno.TcpConn`/`Deno.TlsConn` 全部替换为
+  `@dreamer/runtime-adapter` v1.2.2 的 `connect`/`startTls`/`TcpConn`/`StartTlsOptions`，
+  三端（Deno/Bun/Node）共用同一套连接逻辑。
+- **Node.js 测试基建**：新增 `tsconfig.json`、`ci.yml`（9-job：3 Deno v2.9 +
+  3 Bun + 3 Node 22），`test:node` 由 `tsx --test --test-force-exit` 驱动；
+  Deno/Bun/Node 共享同一套 `tests/*.test.ts`。
+
+### 变更
+
+- **src/mod.ts**：`SmtpClient.connect()` 方法重构——引入局部变量
+  `established: TcpConn` 承载已建立连接，让 TypeScript 在 if/else 合并点能正确
+  收窄，避免对可变类属性 `this.conn` 使用非空断言（根因修复，非 `!` 补丁）。
+- **tests/mod.test.ts**：未注册配置抛错测试新增 `setEmailLocale("zh-CN")`——
+  CI runner 默认英文 locale，`$tr("email.smtp.configNotFound")` 会返回英文，
+  导致中文断言失败。
+- **依赖**：`@dreamer/i18n` ^1.1.2、`@dreamer/runtime-adapter` ^1.2.2、
+  `@dreamer/service` ^1.1.0、`@dreamer/test` ^1.2.3。
+- **deno.json**：新增 `minimumDependencyAge: 0`。
+- **.gitignore**：新增 `package-lock.json`。
+
+### 兼容性
+
+- Deno 2.9+ / Bun 1.3+ / Node.js 22+
+
+---
+
 ## [1.0.0] - 2026-02-19
 
 ### 新增
