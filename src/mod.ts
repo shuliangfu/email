@@ -39,6 +39,12 @@
  * ```
  */
 
+import {
+  connect,
+  startTls,
+  type StartTlsOptions,
+  type TcpConn,
+} from "@dreamer/runtime-adapter";
 import type { ServiceContainer } from "@dreamer/service";
 import { $tr } from "./i18n.ts";
 
@@ -446,7 +452,7 @@ export class SmtpClient {
   private config: Required<Omit<SmtpConfig, "auth">> & {
     auth?: SmtpConfig["auth"];
   };
-  private conn: Deno.TcpConn | Deno.TlsConn | null = null;
+  private conn: TcpConn | null = null;
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
 
@@ -468,26 +474,28 @@ export class SmtpClient {
   async connect(): Promise<void> {
     try {
       // 建立 TCP 连接
-      const conn = await Deno.connect({
-        hostname: this.config.host,
+      const socket = await connect({
+        host: this.config.host,
         port: this.config.port,
       });
 
       // 如果使用安全连接，立即升级为 TLS
+      // 【Why】用局部变量 established 承载已建立连接，让 TS 在合并点能正确收窄，
+      // 避免 this.conn（可变类属性）在 if/else 后被判定为 possibly null。
+      let established: TcpConn = socket;
       if (this.config.secure) {
-        const tlsOptions: Deno.StartTlsOptions = {
-          hostname: this.config.host,
+        const tlsOptions: StartTlsOptions = {
+          host: this.config.host,
         };
         if (this.config.ignoreTLS) {
-          (tlsOptions as any).caCerts = [];
+          tlsOptions.caCerts = [];
         }
-        this.conn = await Deno.startTls(conn, tlsOptions);
-      } else {
-        this.conn = conn;
+        established = await startTls(socket, tlsOptions);
       }
 
-      this.reader = this.conn.readable.getReader();
-      this.writer = this.conn.writable.getWriter();
+      this.conn = established;
+      this.reader = established.readable.getReader();
+      this.writer = established.writable.getWriter();
 
       // 读取服务器欢迎消息
       const response = await this.readResponse();
@@ -522,13 +530,13 @@ export class SmtpClient {
           }
 
           // 升级连接为 TLS
-          const tlsOptions: Deno.StartTlsOptions = {
-            hostname: this.config.host,
+          const tlsOptions: StartTlsOptions = {
+            host: this.config.host,
           };
           if (this.config.ignoreTLS) {
-            (tlsOptions as any).caCerts = [];
+            tlsOptions.caCerts = [];
           }
-          this.conn = await Deno.startTls(conn, tlsOptions);
+          this.conn = await startTls(socket, tlsOptions);
           this.reader = this.conn.readable.getReader();
           this.writer = this.conn.writable.getWriter();
 

@@ -2,8 +2,9 @@
  * @fileoverview Email 测试
  */
 
-import { describe, expect, it } from "@dreamer/test";
 import { ServiceContainer } from "@dreamer/service";
+import { describe, expect, it } from "@dreamer/test";
+import { setEmailLocale } from "../src/i18n.ts";
 import {
   createEmailManager,
   createMessage,
@@ -683,6 +684,9 @@ describe("EmailManager", () => {
   });
 
   it("应该在未注册配置时抛出错误", () => {
+    // 【Why】CI runner 默认英文 locale，$tr("email.smtp.configNotFound") 返回英文；
+    // 显式锁定 zh-CN 以匹配下方中文断言。
+    setEmailLocale("zh-CN");
     const manager = new EmailManager();
     expect(() => manager.getClient("unknown")).toThrow(
       '未找到名为 "unknown" 的 SMTP 配置',
