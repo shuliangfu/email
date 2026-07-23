@@ -2,18 +2,18 @@
 
 > [English](../../README.md) | 中文 (Chinese)
 
-> 一个兼容 Deno 和 Bun 的邮件发送库，提供 SMTP 客户端、HTML 邮件支持等功能
+> 一个兼容 Deno、Bun 和 Node.js 的邮件发送库，提供 SMTP 客户端、HTML 邮件支持等功能
 
 [![JSR](https://jsr.io/badges/@dreamer/email)](https://jsr.io/@dreamer/email)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](../../LICENSE)
-[![Tests](https://img.shields.io/badge/tests-65%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-65%20passed%20(三端)-brightgreen)](./TEST_REPORT.md)
 
 ---
 
 ## 🎯 功能
 
 邮件发送库，用于邮件通知、邮件营销、系统通知等场景，提供 SMTP
-客户端、邮件消息构建、模板渲染与批量发送能力。
+客户端、邮件消息构建、模板渲染与批量发送能力，兼容 Deno、Bun 与 Node.js 22+。
 
 ---
 
@@ -31,15 +31,25 @@ deno add jsr:@dreamer/email
 bunx jsr add @dreamer/email
 ```
 
+### Node.js
+
+```bash
+npx jsr add @dreamer/email
+```
+
+> 需要 Node.js 22+。SMTP 连接经 `@dreamer/runtime-adapter`（`connect` /
+> `startTls`），按运行时自动选择传输层。
+
 ---
 
 ## 🌍 环境兼容性
 
 | 环境       | 版本要求 | 状态                                                |
 | ---------- | -------- | --------------------------------------------------- |
-| **Deno**   | 2.5.0+   | ✅ 完全支持                                         |
-| **Bun**    | 1.0+     | ✅ 完全支持                                         |
-| **服务端** | -        | ✅ 支持（兼容 Deno 和 Bun 运行时，SMTP 客户端功能） |
+| **Deno**   | 2.9+     | ✅ 完全支持                                         |
+| **Bun**    | 1.3+     | ✅ 完全支持                                         |
+| **Node.js**| 22+      | ✅ 完全支持（自 v1.1.0 起）                         |
+| **服务端** | -        | ✅ 支持（兼容 Deno/Bun/Node，SMTP 客户端功能）      |
 | **客户端** | -        | ❌ 不支持（浏览器环境无法直接发送 SMTP 邮件）       |
 | **依赖**   | -        | 📦 无外部依赖（纯 TypeScript 实现）                 |
 
